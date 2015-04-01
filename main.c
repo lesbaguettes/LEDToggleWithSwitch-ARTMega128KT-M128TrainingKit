@@ -15,8 +15,10 @@
 #define	ON		1
 #define OFF		0
 
-volatile unsigned char eledValue;    // EX_LED Á¦¾î Àü¿ªº¯¼ö
-volatile unsigned char sw[8];
+volatile unsigned char eledValue;    // EX_LED Â¡Â¶Ã¦Ã“ Â¿Â¸Ã¸â„¢âˆ«Ã˜ÂºË†
+volatile unsigned char swFlag;
+volatile unsigned char swIndex;
+volatile unsigned char swCnt[8];
 
 void hw_init (void);
 void eled_control(unsigned char, unsigned);
@@ -24,59 +26,62 @@ void eled_toggle(unsigned char);
 void delay(unsigned short td);
 
 int main(void) {
-	unsigned char key;
-	
 	hw_init ();
-
-	while(1) {
-		eledValue	^= PINB;
-		EX_LED		= eledValue;
-		delay(500);
-	}
-
+    
+    while(1) {
+        for( swIndex = 0; swIndex < 8; swIndex++ ) {
+            if( !(PINB ^ (1<<swIndex)) ) {
+                swCnt[swIndex]++;
+            }
+            if( swCnt[swIndex] >= 5 ) {
+                eledValue   ^= (1<<swIndex);
+                EX_LED      = eledValue;
+            }
+        }
+    }
 	return 0;
 }
 
 void hw_init (void) {
-	eledValue   = 0;    // EX_LED¸¦ Á¦¾îÇÏ±â À§ÇÑ Àü¿ªº¯¼ö eledValue¸¦ 0À¸·Î ÃÊ±âÈ­ÇÑ´Ù.
-	DDRB		= 0x00;	// PORTB¸¦ ÀÔ·Â(0)À¸·Î ¸¸µç´Ù.
+	eledValue   = 0;    // EX_LEDâˆÂ¶ Â¡Â¶Ã¦Ã“Â«Å“Â±â€š Â¿ÃŸÂ«â€” Â¿Â¸Ã¸â„¢âˆ«Ã˜ÂºË† eledValueâˆÂ¶ 0Â¿âˆâˆ‘Å’ âˆšÂ Â±â€šÂ»â‰ Â«â€”Â¥Å¸.
+	DDRB		= 0x00;	// PORTBâˆÂ¶ Â¿â€˜âˆ‘Â¬(0)Â¿âˆâˆ‘Å’ âˆâˆÂµÃÂ¥Å¸.
 	PORTB		= 0x00;	// ???
-	MCUCR		= 0x80; // MCU Á¦¾î ·¹Áö½ºÅÍ MCUCRÀÇ Bit7(SRE: External SRAM Enable)À» 1(Enable)·Î ¸¸µç´Ù.
+	MCUCR		= 0x80; // MCU Â¡Â¶Ã¦Ã“ âˆ‘Ï€Â¡Ë†Î©âˆ«â‰ˆÃ• MCUCRÂ¿Â« Bit7(SRE: External SRAM Enable)Â¿Âª 1(Enable)âˆ‘Å’ âˆâˆÂµÃÂ¥Å¸.
 }
 
-// EX_LED¸¦ ÄÑ°Å³ª ²ö´Ù.
+// EX_LEDâˆÂ¶ Æ’â€”âˆžâ‰ˆâ‰¥â„¢ â‰¤Ë†Â¥Å¸.
 void eled_control(unsigned char ledN, unsigned sw) {
 	
     unsigned char led;
 	
-    led = 0;    // led¸¦ 0À¸·Î ÃÊ±âÈ­
+    led = 0;    // ledâˆÂ¶ 0Â¿âˆâˆ‘Å’ âˆšÂ Â±â€šÂ»â‰ 
 	
-    // led¹øÈ£ °ªÀÌ 7º¸´Ù Å©°Å³ª 0º¸´Ù ÀÛÀ¸¸é ÇÔ¼ö¸¦ Á¾·á½ÃÅ²´Ù.
+    // ledÏ€Â¯Â»Â£ âˆžâ„¢Â¿Ãƒ 7âˆ«âˆÂ¥Å¸ â‰ˆÂ©âˆžâ‰ˆâ‰¥â„¢ 0âˆ«âˆÂ¥Å¸ Â¿â‚¬Â¿âˆâˆÃˆ Â«â€˜ÂºË†âˆÂ¶ Â¡Ã¦âˆ‘Â·Î©âˆšâ‰ˆâ‰¤Â¥Å¸.
     if(ledN > 7 || ledN < 0)
 		return;
 	
-    led = (1<<ledN);    // led¿¡ led¹øÈ£¿¡ ÇØ´çµÇ´Â Bit¸¦ 1·Î ¸¸µç´Ù.
+    led = (1<<ledN);    // ledÃ¸Â° ledÏ€Â¯Â»Â£Ã¸Â° Â«Ã¿Â¥ÃÂµÂ«Â¥Â¬ BitâˆÂ¶ 1âˆ‘Å’ âˆâˆÂµÃÂ¥Å¸.
     
 	if(sw) {
-        // sw°ªÀÌ 0ÀÌ ¾Æ´Ï¸é(1ÀÌ¸é) Àü¿ªº¯¼ö eledValue¿¡ led¹øÈ£¿¡ ÇØ´çÇÏ´Â Bit¸¦ ledº¯¼ö¸¦ »ç¿ëÇØ 1·Î ¸¸µç´Ù.
+        // swâˆžâ„¢Â¿Ãƒ 0Â¿Ãƒ Ã¦âˆ†Â¥Å“âˆÃˆ(1Â¿ÃƒâˆÃˆ) Â¿Â¸Ã¸â„¢âˆ«Ã˜ÂºË† eledValueÃ¸Â° ledÏ€Â¯Â»Â£Ã¸Â° Â«Ã¿Â¥ÃÂ«Å“Â¥Â¬ BitâˆÂ¶ ledâˆ«Ã˜ÂºË†âˆÂ¶ ÂªÃÃ¸ÃŽÂ«Ã¿ 1âˆ‘Å’ âˆâˆÂµÃÂ¥Å¸.
         eledValue	|= led;
 	}
 	else {
-        // sw°ªÀÌ 0ÀÌ¸é Àü¿ªº¯¼ö eledValue¿¡ led¹øÈ£¿¡ ÇØ´çÇÏ´Â Bit¸¦ ledº¯¼ö¸¦ »ç¿ëÇØ 0À¸·Î ¸¸µç´Ù.
+        // swâˆžâ„¢Â¿Ãƒ 0Â¿ÃƒâˆÃˆ Â¿Â¸Ã¸â„¢âˆ«Ã˜ÂºË† eledValueÃ¸Â° ledÏ€Â¯Â»Â£Ã¸Â° Â«Ã¿Â¥ÃÂ«Å“Â¥Â¬ BitâˆÂ¶ ledâˆ«Ã˜ÂºË†âˆÂ¶ ÂªÃÃ¸ÃŽÂ«Ã¿ 0Â¿âˆâˆ‘Å’ âˆâˆÂµÃÂ¥Å¸.
         eledValue	&= ~(led);
 	}
 
-    // EX_LED°ª¿¡ Àü¿ªº¯¼ö eledValue¸¦ ´ëÀÔÇØ led¹øÈ£¿¡ ÇØ´çÇÏ´Â led¸¦ ÄÑ°Å³ª ²ö´Ù.
-    // EX_LED´Â WriteOnlyÀÌ±â ¶§¹®¿¡ °ªÀ» ÀÐ¾î¿Ã ¼ö ¾øÀ¸¹Ç·Î Àü¿ªº¯¼ö¸¦ ÅëÇØ Á¦¾îÇÑ´Ù.
+    // EX_LEDâˆžâ„¢Ã¸Â° Â¿Â¸Ã¸â„¢âˆ«Ã˜ÂºË† eledValueâˆÂ¶ Â¥ÃŽÂ¿â€˜Â«Ã¿ ledÏ€Â¯Â»Â£Ã¸Â° Â«Ã¿Â¥ÃÂ«Å“Â¥Â¬ ledâˆÂ¶ Æ’â€”âˆžâ‰ˆâ‰¥â„¢ â‰¤Ë†Â¥Å¸.
+    // EX_LEDÂ¥Â¬ WriteOnlyÂ¿ÃƒÂ±â€š âˆ‚ÃŸÏ€Ã†Ã¸Â° âˆžâ„¢Â¿Âª Â¿â€“Ã¦Ã“Ã¸âˆš ÂºË† Ã¦Â¯Â¿âˆÏ€Â«âˆ‘Å’ Â¿Â¸Ã¸â„¢âˆ«Ã˜ÂºË†âˆÂ¶ â‰ˆÃŽÂ«Ã¿ Â¡Â¶Ã¦Ã“Â«â€”Â¥Å¸.
     EX_LED	= eledValue;
 }
 
 void eled_toggle(unsigned char ledN) {
 	unsigned char led;
 	
-    led = 0;    // led¸¦ 0À¸·Î ÃÊ±âÈ­
+    led = 0;    // ledâˆÂ¶ 0Â¿âˆâˆ‘Å’ âˆšÂ Â±â€šÂ»â‰ 
 	
-    // led¹øÈ£ °ªÀÌ 7º¸´Ù Å©°Å³ª 0º¸´Ù ÀÛÀ¸¸é ÇÔ¼ö¸¦ Á¾·á½ÃÅ²´Ù.
+    // ledÏ€Â¯Â»Â£ âˆžâ„¢Â¿Ãƒ 7âˆ«âˆÂ¥Å¸ â‰ˆÂ©âˆžâ‰ˆâ‰¥â„¢ 0âˆ«âˆÂ¥Å¸ Â¿â‚¬Â¿âˆâˆÃˆ Â«â€˜ÂºË†âˆÂ¶ Â¡Ã¦âˆ‘Â·Î©âˆšâ‰ˆâ‰¤Â¥Å¸.
     if(ledN > 7 || ledN < 0) { return; }
 		
 	led = 1<<ledN;
@@ -86,7 +91,7 @@ void eled_toggle(unsigned char ledN) {
 	EX_LED	= eledValue;
 }
 
-// Å¸ÀÌ¸Ó¸¦ ÀÌ¿ëÇÏÁö ¾Ê´Â delayÇÔ¼ö, Á¤È®ÇÑ Áö¿¬½Ã°£À» ¾Ë ¼ö ¾ø´Ù.
+// â‰ˆâˆÂ¿Ãƒâˆâ€âˆÂ¶ Â¿ÃƒÃ¸ÃŽÂ«Å“Â¡Ë† Ã¦Â Â¥Â¬ delayÂ«â€˜ÂºË†, Â¡Â§Â»Ã†Â«â€” Â¡Ë†Ã¸Â¨Î©âˆšâˆžÂ£Â¿Âª Ã¦Ã€ ÂºË† Ã¦Â¯Â¥Å¸.
 void delay(unsigned short td) {
 	volatile unsigned short i, j;
 	for(i = 0; i < td; i++)
