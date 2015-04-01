@@ -33,6 +33,9 @@ int main(void) {
             if( !(PINB ^ (1<<swIndex)) ) {
                 swCnt[swIndex]++;
             }
+            else {
+                swCnt[swIndex] = 0;
+            }
             if( swCnt[swIndex] >= 5 ) {
                 eledValue   ^= (1<<swIndex);
                 EX_LED      = eledValue;
